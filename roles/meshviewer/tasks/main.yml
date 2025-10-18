@@ -1,0 +1,114 @@
+---
+# Meshviewer Installation und Konfiguration
+
+- name: GitHub API - Latest Release ermitteln
+  uri:
+    url: "https://api.github.com/repos/freifunk/meshviewer/releases/latest"
+    method: GET
+    return_content: yes
+  register: github_release
+  delegate_to: localhost
+
+- name: Release Asset URL extrahieren
+  set_fact:
+    release_url: "{{ github_release.json.assets[0].browser_download_url }}"
+  when: github_release.json.assets is defined and github_release.json.assets|length > 0
+
+- name: Meshviewer Release herunterladen
+  get_url:
+    url: "{{ release_url }}"
+    dest: "/tmp/meshviewer-latest.zip"
+    mode: '0644'
+  when: release_url is defined
+
+- name: Meshviewer Verzeichnis erstellen
+  file:
+    path: "/home/{{ hopglass_user }}/meshviewer"
+    state: directory
+    owner: "{{ hopglass_user }}"
+    group: "{{ hopglass_user }}"
+    mode: '0755'
+
+- name: Meshviewer Release entpacken
+  unarchive:
+    src: "/tmp/meshviewer-latest.zip"
+    dest: "/home/{{ hopglass_user }}/meshviewer"
+    remote_src: yes
+    owner: "{{ hopglass_user }}"
+    group: "{{ hopglass_user }}"
+    creates: "/home/{{ hopglass_user }}/meshviewer/index.html"
+
+- name: Device-Pictures Repository temporär clonen
+  git:
+    repo: "https://github.com/freifunk/device-pictures.git"
+    dest: "/tmp/device-pictures"
+    update: yes
+  become_user: "{{ hopglass_user }}"
+
+- name: Nur pictures-svg nach device-pictures kopieren
+  copy:
+    src: "/tmp/device-pictures/pictures-svg/"
+    dest: "/home/{{ hopglass_user }}/meshviewer/device-pictures"
+    owner: "{{ hopglass_user }}"
+    group: "{{ hopglass_user }}"
+    mode: '0755'
+    directory_mode: '0755'
+    remote_src: yes
+
+- name: Temporäres device-pictures Verzeichnis aufräumen
+  file:
+    path: "/tmp/device-pictures"
+    state: absent
+
+- name: owm2meshviewer Verzeichnis erstellen
+  file:
+    path: "/home/{{ hopglass_user }}/owm2meshviewer"
+    state: directory
+    owner: "{{ hopglass_user }}"
+    group: "{{ hopglass_user }}"
+    mode: '0755'
+
+- name: owm2meshviewer.py kopieren
+  copy:
+    src: "owm2meshviewer.py"
+    dest: "/home/{{ hopglass_user }}/owm2meshviewer/owm2meshviewer.py"
+    owner: "{{ hopglass_user }}"
+    group: "{{ hopglass_user }}"
+    mode: '0755'
+
+- name: Virtualenv für owm2meshviewer erstellen
+  command: "python3 -m virtualenv /home/{{ hopglass_user }}/owm2meshviewer/venv"
+  args:
+    creates: "/home/{{ hopglass_user }}/owm2meshviewer/venv/bin/activate"
+  become_user: "{{ hopglass_user }}"
+
+- name: Python Dependencies installieren
+  pip:
+    name:
+      - diskcache
+      - python-dateutil
+      - requests
+      - tornado
+    virtualenv: "/home/{{ hopglass_user }}/owm2meshviewer/venv"
+    state: present
+  become_user: "{{ hopglass_user }}"
+
+- name: meshviewer_config.json kopieren
+  copy:
+    src: "meshviewer_config.json"
+    dest: "/home/{{ hopglass_user }}/meshviewer/config.json"
+    owner: "{{ hopglass_user }}"
+    group: "{{ hopglass_user }}"
+    mode: '0644'
+
+- name: Cron-Job für owm2meshviewer einrichten
+  cron:
+    name: "owm2meshviewer"
+    minute: "*/10"
+    job: "/home/{{ hopglass_user }}/owm2meshviewer/venv/bin/python /home/{{ hopglass_user }}/owm2meshviewer/owm2meshviewer.py; mv /home/{{ hopglass_user }}/owm2meshviewer/nodes_meshviewer.json /home/{{ hopglass_user }}/meshviewer/"
+    user: "{{ hopglass_user }}"
+
+- name: Temporäre Dateien aufräumen
+  file:
+    path: "/tmp/meshviewer-latest.zip"
+    state: absent

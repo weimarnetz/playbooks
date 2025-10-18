@@ -1,0 +1,10 @@
+---
+- name: Meshviewer Installation und Konfiguration
+  hosts: all
+  vars:
+    hopglass_user: "hopglass"
+    meshviewer_dir: "/home/{{ hopglass_user }}/meshviewer"
+    owm2meshviewer_dir: "/home/{{ hopglass_user }}/owm2meshviewer"
+
+  roles:
+    - meshviewer
