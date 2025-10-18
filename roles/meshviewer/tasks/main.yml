@@ -76,6 +76,14 @@
     group: "{{ hopglass_user }}"
     mode: '0755'
 
+- name: Wrapper-Script für owm2meshviewer deployen
+  template:
+    src: "owm2meshviewer.sh.j2"
+    dest: "/home/{{ hopglass_user }}/owm2meshviewer/owm2meshviewer.sh"
+    owner: "{{ hopglass_user }}"
+    group: "{{ hopglass_user }}"
+    mode: '0755'
+
 - name: Virtualenv für owm2meshviewer erstellen
   command: "python3 -m virtualenv /home/{{ hopglass_user }}/owm2meshviewer/venv"
   args:
@@ -105,7 +113,7 @@
   cron:
     name: "owm2meshviewer"
     minute: "*/10"
-    job: "/home/{{ hopglass_user }}/owm2meshviewer/venv/bin/python /home/{{ hopglass_user }}/owm2meshviewer/owm2meshviewer.py; mv /home/{{ hopglass_user }}/owm2meshviewer/nodes_meshviewer.json /home/{{ hopglass_user }}/meshviewer/"
+    job: "/home/{{ hopglass_user }}/owm2meshviewer/owm2meshviewer.sh; mv /home/{{ hopglass_user }}/owm2meshviewer/nodes_meshviewer.json /home/{{ hopglass_user }}/meshviewer/meshviewer.json"
     user: "{{ hopglass_user }}"
 
 - name: Temporäre Dateien aufräumen

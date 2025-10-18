@@ -1,0 +1,9 @@
+#!/bin/bash
+# Wrapper-Script für owm2meshviewer.py
+# Setzt Umgebungsvariablen und ruft das Python-Script auf
+
+export PROMETHEUS_URL="{{ prometheus_url }}"
+export PROMETHEUS_BEARER_TOKEN="{{ prometheus_bearer_token }}"
+
+cd /home/{{ hopglass_user }}/owm2meshviewer
+/home/{{ hopglass_user }}/owm2meshviewer/venv/bin/python owm2meshviewer.py

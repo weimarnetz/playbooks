@@ -5,6 +5,13 @@
     hopglass_user: "hopglass"
     meshviewer_dir: "/home/{{ hopglass_user }}/meshviewer"
     owm2meshviewer_dir: "/home/{{ hopglass_user }}/owm2meshviewer"
+  vars_prompt:
+    - name: prometheus_url
+      prompt: "Prometheus URL (z.B. https://vmauth.ei.ne-zier.de/api/v1/query?query=weimarnetz_dhcp_clients)"
+      default: "https://vmauth.ei.ne-zier.de/api/v1/query?query=weimarnetz_dhcp_clients"
+    - name: prometheus_bearer_token
+      prompt: "Prometheus Bearer Token"
+      private: yes
 
   roles:
     - meshviewer

@@ -22,26 +22,13 @@ import requests
 # typically.
 cache = Cache("/dev/shm/owm2meshviewer_cache")
 
-firmware_prekathleen = re.compile(r"^Freifunk Berlin [0-9]\.*")
-firmware_hedy = re.compile(r"^Freifunk Berlin [hH]edy 1\.[0-9]\.[0-9]")
-firmware_falter = re.compile(r"^Freifunk Falter [0-9]\.[0-9]\.[0-9]")
-firmware_ffb_dev = re.compile("^Freifunk Berlin Dev")
-firmware_potsdam = re.compile("^Freifunk Potsdam")
-firmware_kathleen_correct = re.compile(r"^Freifunk Berlin kathleen 0\.[2-3]\.0$")
-firmware_kathleen_correct_dev = re.compile(
-    r"^Freifunk[ -]Berlin [kK]athleen 0\.[2-3]\.0-.*\+[a-f0-9]{7}$"
-)
-firmware_pre020 = re.compile(r"^Freifunk Berlin kathleen 0\.[0-1]\.[0-2]$")
-firmware_pre020_dev = re.compile(r"^Freifunk[ -]Berlin kathleen 0\.[0-2]\.[0-2][ -].*")
-firmware_kathleen1505 = re.compile(r"^Freifunk Berlin kathleen 15.05(\.1){0,1}$")
-firmware_openwrt = re.compile("^OpenWrt .*")
-
 bounding_box = (
-    "-90,-180,90,180"  # Berlin and parts of East Brandenburg (-> Fuerstenwalde)
+    "-90,-180,90,180"  # Weimar + Saalfeld, Rudolstadt, Dittrichshütte, Meusebach, Camburg
 )
 bounding_box_elems = [float(x) for x in bounding_box.split(",")]
 date_format = "%Y-%m-%dT%H:%M:%S+0000"
-prometheus_url = "http://monitor.berlin.freifunk.net:9090/api/v1/query?query=collectd_dhcpleases_count{}"
+prometheus_url = os.environ.get("PROMETHEUS_URL", "https://victoria-metrics/api/v1/query?query=weimarnetz_dhcp_clients")
+prometheus_bearer_token = os.environ.get("PROMETHEUS_BEARER_TOKEN", "")
 dhcp_clients = {}
 nodes = []
 graphlinks = []
@@ -50,8 +37,14 @@ graphlinks = []
 def get_dhcp_clients():
     global dhcp_clients
     global prometheus_url
+    global prometheus_bearer_token
+    
+    headers = {}
+    if prometheus_bearer_token:
+        headers['Authorization'] = f'Bearer {prometheus_bearer_token}'
+    
     try:
-        response = requests.get(prometheus_url, timeout=5)
+        response = requests.get(prometheus_url, headers=headers, timeout=5)
     except Exception as e:
         print(f"Error accessing Prometheus API: {e}")
         return
@@ -59,7 +52,7 @@ def get_dhcp_clients():
         data = response.json()
         if "data" in data and "result" in data["data"]:
             for result in data["data"]["result"]:
-                node = result["metric"]["exported_instance"]
+                node = result["metric"]["hostname"]
                 clients = int(result["value"][1])
                 dhcp_clients[node] = clients
 
@@ -112,100 +105,33 @@ def parse_firmware(firmware):
     """extracts firmware data from OWM data and returns firmware name and revision"""
     firmware_base = "unknown"
     firmware_release = "unknown"
-    print(f"Firmware (raw): {firmware['name']}/{firmware['revision']}")
+    
     try:
-        if "name" in firmware and len(firmware["name"]) == 0:
-            firmware_name = firmware[
-                "revision"
-            ]  # Kathleen < 0.2.0 uses "revision" field for all data
-            if firmware_pre020.match(firmware_name):
-                print("Kathleen pre-0.2.0")
-                firmware_release = firmware_name
-                firmware_base = re.sub(
-                    r"^Freifunk Berlin kathleen ", "v", firmware_name
-                )
-            elif firmware_pre020_dev.match(firmware_name):
-                print("pre-0.2.0 development")
-                firmware_release = re.sub(r"\+[a-f0-9]{7}$", "", firmware_name)
-                # kathleen 0.2.0-alpha has some versions w/o git-hash
-                # only fill firmware_base when we have a git-hash
-                temp = firmware_name.lstrip(firmware_release)
-                if len(temp) > 0:
-                    firmware_base = temp.lstrip("+")
-                    temp = ""
-            elif firmware_kathleen1505.match(firmware_name):
-                firmware_release = firmware_name
-            elif firmware_openwrt.match(firmware_name):
-                print("old OpenWRT firmware")
-                if (firmware_name.find("Attitude Adjustment") != -1) or (
-                    firmware_name.find("Barrier Breaker berlin") != -1
-                ):
-                    print("found AA or BB pberg / berlin")
-                    (firmware_release, firmware_base) = firmware_name.split("-")
-                elif firmware_name.find("OpenWrt Chaos Calmer") != -1:
-                    (firmware_release, firmware_base) = firmware_name.rsplit(" ", 1)
-                else:
-                    print("unknown OpenWrt")
-            else:
-                firmware_release = re.sub(r"\+[a-f0-9]{7}$", "", firmware_name)
-        elif firmware_kathleen_correct.match(firmware["name"]):
-            print("regular firmware data")
-
-            firmware_release = firmware["name"]
-            firmware_base = firmware["revision"]
-        elif firmware_kathleen_correct_dev.match(
-            firmware["name"]
-        ):  # "Freifunk Berlin kathleen 0.2.0-beta+718cff0"
-            print("regular development")
-            firmware_release = re.sub(r"\+[a-f0-9]{7}$", "", firmware["name"])
-            firmware_base = firmware["name"][-7:]
-        elif firmware_hedy.match(firmware["name"]):
-            print("hedy firmware")
-            firmware_release = firmware["name"]
-            firmware_base = firmware["revision"]
-        elif firmware_falter.match(firmware["name"]):
-            print("falter firmware")
-            firmware_release = firmware["name"]
-            firmware_base = firmware["revision"]
-        elif firmware_prekathleen.match(
-            firmware["name"]
-        ):  # "Freifunk Berlin 1.1.0-alpha"
-            print("pre kathleen firmware")
-            firmware_release = firmware["name"]
-            firmware_base = firmware["revision"]
-        elif firmware_ffb_dev.match(firmware["name"]):  # "Freifunk Berlin Dev-daily"
-            print("Freifunk Berlin Dev")
-            firmware_release = firmware["name"]
-            firmware_base = firmware["revision"]
-        elif firmware_potsdam.match(firmware["name"]):  # "Freifunk Potsdam"
-            print("Freifunk Potsdam")
-            firmware_release = firmware["name"]
-            firmware_base = firmware["revision"]
+        print(f"Firmware (raw): {firmware}")
+        
+        # Neue JSON-Struktur: name ist nicht leer
+        if firmware.get("name") and firmware.get("name").strip():
+            firmware_base = firmware.get("name", "unknown")
+            firmware_release = firmware.get("packageDescription", "unknown")
+            print("Neue Firmware-Struktur erkannt")
+        
+        # Alte JSON-Struktur: name ist leer oder nicht vorhanden
+        elif not firmware.get("name") or not firmware.get("name").strip():
+            firmware_base = firmware.get("distversion", "unknown")
+            firmware_release = firmware.get("fffversion", "unknown")
+            print("Alte Firmware-Struktur erkannt")
+        
         else:
-            print("unknown firmware type")
-            firmware_release = firmware.get("name", "unknown")
-            firmware_base = firmware.get("revision", "unknown")
-        firmware_release = re.sub(
-            r"^Freifunk-Berlin", "Freifunk Berlin", firmware_release
-        )
-        firmware_release = re.sub(r"^Freifunk Berlin hedy", "Hedy", firmware_release)
-        firmware_release = re.sub(
-            r"^Freifunk Berlin kathleen", "Kathleen", firmware_release
-        )  # "Kathleen 0.2.0-beta+718cff0"
-        firmware_release = re.sub(
-            r"^OpenWrt Attitude Adjustment", "OpenWrt AA", firmware_release
-        )
-        firmware_release = re.sub(
-            r"^OpenWrt Barrier Breaker", "OpenWrt BB", firmware_release
-        )
-        firmware_release = re.sub(
-            r"^OpenWrt Chaos Calmer", "OpenWrt CC", firmware_release
-        )
-    except:
-        print("firmwaredecode exception")
-        traceback.print_exc(file=sys.stdout)
+            # Fallback für unbekannte Strukturen
+            firmware_base = firmware.get("name", "unknown")
+            firmware_release = firmware.get("revision", "unknown")
+            print("Unbekannte Firmware-Struktur, Fallback verwendet")
+            
+    except Exception as e:
+        print(f"Firmware-Parse-Fehler: {e}")
         firmware_base = "unknown"
         firmware_release = "unknown"
+    
     print(f"Firmware release '{firmware_release}', base '{firmware_base}'")
     return (firmware_base, firmware_release)
 
