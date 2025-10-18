@@ -107,8 +107,6 @@ def parse_firmware(firmware):
     firmware_release = "unknown"
     
     try:
-        print(f"Firmware (raw): {firmware}")
-        
         # Neue JSON-Struktur: name ist nicht leer
         if firmware.get("name") and firmware.get("name").strip():
             firmware_base = firmware.get("name", "unknown")
@@ -336,7 +334,7 @@ def process_node_json(comment, body, ignore_if_offline=True):
             host_id=hostid,
             # mac="84:16:f9:9b:bc:0a",
             addresses=node_addresses,
-            domain=owmnode["freifunk"]["community"]["name"],
+            domain=owmnode.get("freifunk", {}).get("community", {}).get("name", "Weimar"),
             hostname=hostname,
             owner=email,
             location=dict(longitude=longitude, latitude=latitude),
