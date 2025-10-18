@@ -359,6 +359,14 @@
       "value": "Clients"
     }
   ],
+  "nodeInfos": [
+    {
+      "name": "Clientstatistik",
+      "href": "https://metrics.ei.ne-zier.de/d/abcdpwf/router-details?orgId=1&from=now-24h&to=now&timezone=browser&var-hostname={NODE_NAME}",
+      "image": "https://metrics.ei.ne-zier.de/render/dashboard-solo/db/node-details-for-map?panelId=7&var-id={NODE_ID}&from=now-7d&to=now&width=600&height=300&theme=light&_t={TIME}",
+      "title": "Knoten {NODE_ID} ({NODE_NAME})"
+    }
+  ],
   "nodeZoom": 19,
   "reverseGeocodingApi": "https://nominatim.openstreetmap.org/reverse",
   "siteName": "Weimarnetz",

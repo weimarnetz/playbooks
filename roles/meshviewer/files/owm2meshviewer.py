@@ -160,55 +160,21 @@ def process_node_json(comment, body, ignore_if_offline=True):
             print("...out of geographic bounds, skipping")
             return
 
-        # special case: fetch whether there is uplink or not for hedy devices. general case below
-        try:
-            fw_name = owmnode["firmware"]["name"]
-        except:
-            fw_name = "nothing"  # Boolean __None__ would result in roughly 40 nodes being dropped.
-
         site_code = None  # TODO Falter hack. Delete later.
-        if fw_version_equal_or_more_recent(
-            fw_name, "1.0.0"
-        ) and not fw_version_equal_or_more_recent(
-            fw_name, "1.1.0"
-        ):  # hedy firmwares
-            isuplink = False
-            for iface in owmnode["interfaces"]:
-                try:
-                    if iface["device"] == "ffuplink":
-                        isuplink = True
-                        break  # avoid further iteration to save computing power
-                except:
-                    continue
-        elif fw_name.startswith("Freifunk ") and fw_version_equal_or_more_recent(
-            fw_name, "1.1.0"
-        ):
-            # falter-1.1.0 does not send router interfaces anymore. Fetch uplink from olsr config:
-            # Does the router announce a gateway?
-            isuplink = False
-            try:
-                if (
-                    owmnode["olsr"].get("ipv4Config").get("hasIpv4Gateway") is True
-                    or owmnode["olsr"].get("ipv4Config").get("hasIpv6Gateway") is True
-                ):
-                    isuplink = True
-                # Dirty fix: just assume that any router which has WAN also shares wifi.
-                # TODO: re-enable some information on interfaces in Falter-OWM.lua again
-                site_code = "hotspot"
-            except:
-                pass
-        else:
-            # general case: check if the router itself has an uplink via WAN. returns True or False
-            isuplink = (
-                len(
-                    [
-                        a
-                        for a in owmnode.get("interfaces", [])
-                        if a.get("ifname", "none") == "ffvpn"
-                    ]
-                )
-                > 0
-            )
+
+        isuplink = False
+        try:
+            if (
+                owmnode["olsr"].get("ipv4Config").get("hasIpv4Gateway") is True
+                or owmnode["olsr"].get("ipv4Config").get("hasIpv6Gateway") is True
+            ):
+                isuplink = True
+            # Dirty fix: just assume that any router which has WAN also shares wifi.
+            # TODO: re-enable some information on interfaces in Falter-OWM.lua again
+            site_code = "hotspot"
+        except:
+            pass
+
 
         hasclientdhcp = (
             len(
