@@ -361,9 +361,9 @@
   ],
   "nodeInfos": [
     {
-      "name": "Clientstatistik",
+      "name": "Client Load",
       "href": "https://metrics.ei.ne-zier.de/d/abcdpwf/router-details?orgId=1&from=now-24h&to=now&timezone=browser&var-hostname={NODE_NAME}",
-      "image": "https://metrics.ei.ne-zier.de/render/dashboard-solo/db/node-details-for-map?panelId=7&var-id={NODE_ID}&from=now-7d&to=now&width=600&height=300&theme=light&_t={TIME}",
+      "image": "https://metrics.ei.ne-zier.de/render/d/abcdpwf/router-details?from=now-7d&to=now&width=600&height=300&theme=light&timezone=browser&var-hostname={NODE_NAME}&viewPanel=panel-5",
       "title": "Knoten {NODE_ID} ({NODE_NAME})"
     }
   ],
