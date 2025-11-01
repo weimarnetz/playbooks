@@ -1,7 +1,7 @@
 ---
 # WireGuard Installation und Konfiguration für inter-VPN-Verbindungen
 
-- name: WireGuard installieren (Debian/Ubuntu)
+- name: WireGuard installieren
   apt:
     name:
       - wireguard
@@ -9,15 +9,6 @@
       - iptables
     state: present
     update_cache: yes
-  when: ansible_os_family == "Debian"
-
-- name: WireGuard installieren (RedHat/CentOS)
-  yum:
-    name:
-      - wireguard-tools
-      - iptables
-    state: present
-  when: ansible_os_family == "RedHat"
 
 - name: Verzeichnis für WireGuard-Keys erstellen
   file:

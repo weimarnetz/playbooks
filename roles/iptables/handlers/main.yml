@@ -3,9 +3,4 @@
 
 - name: apply iptables rules
   command: iptables-restore < /etc/iptables/rules.v4
-  when: ansible_os_family == "Debian"
-
-- name: apply iptables rules (RedHat)
-  command: iptables-restore < /etc/iptables/rules.v4
-  when: ansible_os_family == "RedHat"
 

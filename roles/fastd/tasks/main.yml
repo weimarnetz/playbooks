@@ -1,20 +1,12 @@
 ---
 # fastd Installation und Konfiguration für Router-Verbindungen
 
-- name: fastd installieren (Debian/Ubuntu)
+- name: fastd installieren
   apt:
     name:
       - fastd
     state: present
     update_cache: yes
-  when: ansible_os_family == "Debian"
-
-- name: fastd installieren (RedHat/CentOS)
-  yum:
-    name:
-      - fastd
-    state: present
-  when: ansible_os_family == "RedHat"
 
 - name: Gateway-IP für fastd berechnen
   set_fact:

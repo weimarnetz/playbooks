@@ -19,7 +19,7 @@ Dieses Ansible Playbook installiert und konfiguriert automatisch Meshviewer auf 
 
 2. **Playbook ausführen:**
    ```bash
-   ansible-playbook -i inventory.ini playbook.yml
+   ansible-playbook -i inventory.ini meshviewer-playbook.yml
    ```
 
 ## Was wird installiert

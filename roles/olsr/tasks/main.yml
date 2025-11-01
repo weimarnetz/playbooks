@@ -2,7 +2,7 @@
 # OLSR Installation und Konfiguration
 # OLSR wird aus dem Quellcode kompiliert und installiert
 
-- name: Build-Dependencies installieren (Debian/Ubuntu)
+- name: Build-Dependencies installieren
   apt:
     name:
       - build-essential
@@ -13,18 +13,6 @@
       - gcc
     state: present
     update_cache: yes
-  when: ansible_os_family == "Debian"
-
-- name: Build-Dependencies installieren (RedHat/CentOS)
-  yum:
-    name:
-      - "@development-tools"
-      - libnl3-devel
-      - git
-      - make
-      - gcc
-    state: present
-  when: ansible_os_family == "RedHat"
 
 - name: OLSR Build-Verzeichnis erstellen
   file:

@@ -1,20 +1,12 @@
 ---
 # iptables-Regeln für NAT-Masquerading und Rate-Limiting
 
-- name: iptables-persistent installieren (Debian/Ubuntu)
+- name: iptables-persistent installieren
   apt:
     name:
       - iptables-persistent
     state: present
     update_cache: yes
-  when: ansible_os_family == "Debian"
-
-- name: netfilter-persistent installieren (RedHat/CentOS)
-  yum:
-    name:
-      - iptables-services
-    state: present
-  when: ansible_os_family == "RedHat"
 
 - name: Verzeichnis für iptables-Regeln erstellen
   file:
@@ -33,16 +25,9 @@
     group: root
   notify: apply iptables rules
 
-- name: netfilter-persistent Service aktivieren (Debian)
+- name: netfilter-persistent Service aktivieren
   systemd:
     name: netfilter-persistent
     enabled: yes
     state: started
-  when: ansible_os_family == "Debian"
-
-- name: iptables Service aktivieren (RedHat/CentOS)
-  systemd:
-    name: iptables
-    enabled: yes
-  when: ansible_os_family == "RedHat"
 
