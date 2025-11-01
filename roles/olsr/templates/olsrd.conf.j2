@@ -1,0 +1,118 @@
+# OLSR Konfiguration für Weimarer Freifunk VPN-Server
+# Diese Datei wurde automatisch durch Ansible generiert
+
+{% if olsr_main_ip is defined and olsr_main_ip | length > 0 %}
+MainIp {{ olsr_main_ip }}
+{% endif %}
+
+DebugLevel {{ olsr_debug_level | default(0) }}
+LinkQualityAlgorithm "{{ olsr_link_quality_algorithm | default('etx_ffeth') }}"
+AllowNoInt              yes
+Pollrate                {{ olsr_pollrate | default('0.2') }}
+NicChgsPollInt          {{ olsr_nic_chgs_poll_int | default('16.0') }}
+FIBMetric               "{{ olsr_fib_metric | default('approx') }}"
+TcRedundancy            {{ olsr_tc_redundancy | default(2) }}
+MprCoverage             {{ olsr_mpr_coverage | default(7) }}
+UseHysteresis           {{ olsr_use_hysteresis | default('no') }}
+LinkQualityFishEye      {{ olsr_link_quality_fisheye | default(1) }}
+
+{% if olsr_rt_table is defined %}
+RtTable {{ olsr_rt_table }}
+{% endif %}
+
+{% if olsr_rt_table_default is defined %}
+RtTableDefault {{ olsr_rt_table_default }}
+{% endif %}
+
+IpcConnect {
+        MaxConnections  {{ olsr_ipc_max_connections | default(1) }}
+        Host            {{ olsr_ipc_host | default('127.0.0.1') }}
+}
+
+Hna4 {
+{% if olsr_hna4_networks is defined and olsr_hna4_networks | length > 0 %}
+{% for network in olsr_hna4_networks %}
+	{{ network }}
+{% endfor %}
+{% else %}
+	# Keine HNA4-Routen konfiguriert
+{% endif %}
+}
+
+{% if olsr_plugins.txtinfo.enabled | default(false) %}
+LoadPlugin "olsrd_txtinfo.so.1.1"
+{
+	PlParam "accept" "{{ olsr_plugins.txtinfo.accept }}"
+	PlParam "listen" "{{ olsr_plugins.txtinfo.listen }}"
+	PlParam "port" "{{ olsr_plugins.txtinfo.port }}"
+}
+{% endif %}
+
+{% if olsr_plugins.filtergw.enabled | default(false) %}
+LoadPlugin "olsrd_filtergw.so.0.0.1"
+{
+	PlParam "allowList" "{{ olsr_plugins.filtergw.allowList }}"
+}
+{% endif %}
+
+{% if olsr_plugins.jsoninfo.enabled | default(false) %}
+LoadPlugin "olsrd_jsoninfo.so.1.1"
+{
+	PlParam "accept" "{{ olsr_plugins.jsoninfo.accept }}"
+	PlParam "listen" "{{ olsr_plugins.jsoninfo.listen }}"
+	PlParam "port" "{{ olsr_plugins.jsoninfo.port }}"
+}
+{% endif %}
+
+{% if olsr_plugins.nameservice.enabled | default(false) %}
+LoadPlugin "olsrd_nameservice.so.0.4"
+{
+	PlParam "name" "{{ olsr_plugins.nameservice.name }}"
+	PlParam "service" "{{ olsr_plugins.nameservice.service }}"
+	PlParam "hosts-file" "{{ olsr_plugins.nameservice.hosts_file }}"
+	PlParam "add-hosts" "{{ olsr_plugins.nameservice.add_hosts }}"
+	PlParam "suffix" "{{ olsr_plugins.nameservice.suffix }}"
+	PlParam "interval" "{{ olsr_plugins.nameservice.interval }}"
+	PlParam "timeout" "{{ olsr_plugins.nameservice.timeout }}"
+}
+{% endif %}
+
+{% if olsr_plugins.arprefresh.enabled | default(false) %}
+LoadPlugin "olsrd_arprefresh.so.0.1"
+{
+}
+{% endif %}
+
+{% if olsr_fastd_interface is defined and olsr_fastd_interface | length > 0 %}
+# fastd-Interface (wird später konfiguriert)
+Interface "{{ olsr_fastd_interface }}"
+{
+	Ip4Broadcast 255.255.255.255
+	HelloInterval {{ olsr_fastd_hello_interval | default(4.0) }}
+	HelloValidityTime {{ olsr_fastd_hello_validity_time | default(175.0) }}
+	TcValidityTime {{ olsr_fastd_tc_validity_time | default(700.0) }}
+	TcInterval {{ olsr_fastd_tc_interval | default(3.0) }}
+	MidInterval {{ olsr_fastd_mid_interval | default(35.0) }}
+	MidValidityTime {{ olsr_fastd_mid_validity_time | default(700.0) }}
+	HnaInterval {{ olsr_fastd_hna_interval | default(14.0) }}
+	HnaValidityTime {{ olsr_fastd_hna_validity_time | default(175.0) }}
+}
+{% endif %}
+
+# WireGuard-Interface für OLSR
+Interface "{{ olsr_wireguard_interface | default('wg0') }}"
+{
+        HelloInterval           {{ olsr_wg_hello_interval | default(4.0) }}
+        HelloValidityTime       {{ olsr_wg_hello_validity_time | default(150.0) }}
+        TcInterval              {{ olsr_wg_tc_interval | default(3.0) }}
+        TcValidityTime          {{ olsr_wg_tc_validity_time | default(600.0) }}
+        MidInterval             {{ olsr_wg_mid_interval | default(30.0) }}
+        MidValidityTime         {{ olsr_wg_mid_validity_time | default(600.0) }}
+        HnaInterval             {{ olsr_wg_hna_interval | default(12.0) }}
+        HnaValidityTime         {{ olsr_wg_hna_validity_time | default(150.0) }}
+{% if olsr_wg_ip4_broadcast is defined and olsr_wg_ip4_broadcast | length > 0 %}
+        Ip4Broadcast {{ olsr_wg_ip4_broadcast }}
+{% else %}
+        #Ip4Broadcast 255.255.255.255
+{% endif %}
+}

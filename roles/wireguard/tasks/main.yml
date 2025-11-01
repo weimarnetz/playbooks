@@ -1,0 +1,199 @@
+---
+# WireGuard Installation und Konfiguration für inter-VPN-Verbindungen
+
+- name: WireGuard installieren (Debian/Ubuntu)
+  apt:
+    name:
+      - wireguard
+      - wireguard-tools
+      - iptables
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: WireGuard installieren (RedHat/CentOS)
+  yum:
+    name:
+      - wireguard-tools
+      - iptables
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Verzeichnis für WireGuard-Keys erstellen
+  file:
+    path: "/etc/wireguard"
+    state: directory
+    mode: '0700'
+
+- name: Prüfen ob privater Schlüssel bereits existiert
+  stat:
+    path: "/etc/wireguard/{{ wireguard_interface }}_private.key"
+  register: private_key_exists
+
+- name: Privaten WireGuard-Schlüssel generieren
+  command: wg genkey
+  register: private_key_gen
+  changed_when: false
+  when: not private_key_exists.stat.exists
+
+- name: Privaten Schlüssel speichern
+  copy:
+    content: "{{ private_key_gen.stdout }}"
+    dest: "/etc/wireguard/{{ wireguard_interface }}_private.key"
+    mode: '0600'
+    owner: root
+    group: root
+  when: not private_key_exists.stat.exists
+
+- name: Privaten Schlüssel einlesen (falls vorhanden)
+  slurp:
+    src: "/etc/wireguard/{{ wireguard_interface }}_private.key"
+  register: private_key_content
+  when: private_key_exists.stat.exists
+  changed_when: false
+
+- name: Privaten Schlüssel als Variable setzen
+  set_fact:
+    current_private_key: "{{ private_key_gen.stdout | default(private_key_content.content | b64decode | trim) }}"
+
+- name: Prüfen ob öffentlicher Schlüssel bereits existiert
+  stat:
+    path: "/etc/wireguard/{{ wireguard_interface }}_public.key"
+  register: public_key_exists
+
+- name: Öffentlichen Schlüssel aus privatem Schlüssel generieren
+  shell: "echo '{{ current_private_key }}' | wg pubkey"
+  register: public_key_gen
+  changed_when: false
+
+- name: Öffentlichen Schlüssel speichern
+  copy:
+    content: "{{ public_key_gen.stdout }}"
+    dest: "/etc/wireguard/{{ wireguard_interface }}_public.key"
+    mode: '0644'
+    owner: root
+    group: root
+  when: not public_key_exists.stat.exists
+
+- name: Privaten Schlüssel für Template verfügbar machen
+  set_fact:
+    wireguard_private_key: "{{ current_private_key }}"
+
+- name: Öffentlichen Schlüssel aus Datei einlesen (falls bereits vorhanden)
+  slurp:
+    src: "/etc/wireguard/{{ wireguard_interface }}_public.key"
+  register: public_key_file_content
+  when: public_key_exists.stat.exists
+  changed_when: false
+
+- name: Öffentlichen Schlüssel für Output verfügbar machen
+  set_fact:
+    wireguard_public_key: "{{ public_key_gen.stdout if (public_key_gen.stdout is defined and public_key_gen.stdout | length > 0) else (public_key_file_content.content | b64decode | trim) }}"
+
+- name: Prüfen ob vars_prompt Variablen vorhanden sind
+  assert:
+    that:
+      - wireguard_peer_public_key is defined
+      - wireguard_peer_public_key | length > 0
+      - wireguard_peer_endpoint_host is defined
+      - wireguard_peer_endpoint_host | length > 0
+    fail_msg: "Fehler: wireguard_peer_public_key oder wireguard_peer_endpoint_host fehlt. Diese sollten über vars_prompt abgefragt werden."
+    success_msg: "Alle erforderlichen WireGuard-Peer-Variablen sind vorhanden."
+
+- name: Prüfen ob vpn_server_number gesetzt ist
+  assert:
+    that:
+      - vpn_server_number is defined
+      - vpn_server_number | int >= 2
+      - vpn_server_number | int <= 9
+    fail_msg: "Fehler: vpn_server_number muss gesetzt sein und zwischen 2 und 9 liegen (aktuell: {{ vpn_server_number | default('NICHT_DEFINIERT') }})"
+    success_msg: "vpn_server_number ist korrekt gesetzt: {{ vpn_server_number }}"
+
+- name: WireGuard IP-Adresse basierend auf Server-Nummer berechnen
+  set_fact:
+    wireguard_subnet_base: "{{ ((vpn_server_number | int) - 1) * 4 }}"
+    wireguard_address_ip: "{{ ((vpn_server_number | int) - 1) * 4 + 1 }}"
+  
+- name: WireGuard Adresse setzen
+  set_fact:
+    wireguard_address: "{{ wireguard_ip_base }}.{{ wireguard_address_ip }}/30"
+
+- name: WireGuard Port basierend auf Server-Nummer berechnen
+  set_fact:
+    wireguard_port: "{{ (wireguard_base_port | default(51190) | int) + (vpn_server_number | int) }}"
+
+- name: Server-IP ohne Subnetz-Maske berechnen
+  set_fact:
+    wireguard_server_ip: "{{ wireguard_ip_base }}.{{ wireguard_address_ip }}"
+
+- name: Standard AllowedIPs für Peer setzen (mit vollständiger Adresse)
+  set_fact:
+    wireguard_allowed_ips_default: "{{ [wireguard_address, '10.63.0.0/16', '10.64.0.0/16'] }}"
+
+- name: AllowedIPs für Template setzen
+  set_fact:
+    wireguard_allowed_ips: "{{ wireguard_allowed_ips_default if (wireguard_peer_allowed_ips is not defined or wireguard_peer_allowed_ips | length == 0) else wireguard_peer_allowed_ips }}"
+
+- name: OLSR Main IP aus WireGuard Adresse setzen (falls nicht gesetzt)
+  set_fact:
+    olsr_main_ip: "{{ wireguard_server_ip }}"
+  when: olsr_main_ip is not defined or olsr_main_ip | length == 0
+
+- name: Debug - WireGuard Variablen anzeigen
+  debug:
+    msg:
+      - "vpn_server_number: {{ vpn_server_number }}"
+      - "wireguard_address_ip berechnet: {{ wireguard_address_ip }}"
+      - "wireguard_address: {{ wireguard_address }}"
+      - "wireguard_port: {{ wireguard_port }}"
+      - "wireguard_server_ip: {{ wireguard_server_ip }}"
+      - "wireguard_allowed_ips: {{ wireguard_allowed_ips }}"
+      - "wireguard_peer_endpoint_host: {{ wireguard_peer_endpoint_host }}"
+  when: ansible_verbosity >= 1
+
+- name: WireGuard-Konfigurationsdatei erstellen
+  template:
+    src: "wg0.conf.j2"
+    dest: "/etc/wireguard/{{ wireguard_interface }}.conf"
+    mode: '0600'
+    owner: root
+    group: root
+  notify: restart wireguard
+
+- name: IP Forwarding aktivieren
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    state: present
+    sysctl_set: yes
+    reload: yes
+
+- name: WireGuard Service aktivieren und starten
+  systemd:
+    name: "wg-quick@{{ wireguard_interface }}"
+    enabled: yes
+    state: started
+    daemon_reload: yes
+
+- name: WireGuard Outputs anzeigen
+  debug:
+    msg:
+      - "=========================================="
+      - "WireGuard Setup abgeschlossen"
+      - "=========================================="
+      - "Server: {{ inventory_hostname }} (vpn_server_number: {{ vpn_server_number }})"
+      - ""
+      - "ÖFFENTLICHER SCHLÜSSEL (für zentralen Server):"
+      - "{{ wireguard_public_key | default('FEHLT') }}"
+      - ""
+      - "WireGuard Konfiguration:"
+      - "  Interface: {{ wireguard_interface }}"
+      - "  Adresse: {{ wireguard_address }}"
+      - "  Port: {{ wireguard_port }}"
+      - "  Endpoint: {{ wireguard_peer_endpoint_host }}:{{ wireguard_port }}"
+      - ""
+      - "Bitte übermitteln Sie den öffentlichen Schlüssel an die"
+      - "Admins des zentralen Servers, damit dieser konfiguriert werden kann."
+      - "=========================================="
+  tags: always
+

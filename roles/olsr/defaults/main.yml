@@ -1,0 +1,46 @@
+---
+# Standard-Variablen für OLSR-Rolle
+
+# Git-Branch des OLSR-Quellcodes (master/main)
+olsr_branch: "master"
+
+# Main IP-Adresse des Servers (wird in OLSR-Config verwendet)
+olsr_main_ip: ""
+
+# WireGuard-Interface für OLSR (OLSR läuft über dieses WireGuard-Interface)
+# Hinweis: Später kommt noch fastd hinzu, daher die spezifische Benennung
+olsr_wireguard_interface: "wg0"
+
+# fastd-Interface für OLSR (optional, wird erst später konfiguriert)
+olsr_fastd_interface: "fastd_mesh"
+
+# Netzwerk, das über OLSR angekündigt wird (HNA4)
+olsr_hna4_networks: []
+
+# Plugin-Konfigurationen
+olsr_plugins:
+  txtinfo:
+    enabled: true
+    accept: "0.0.0.0"
+    listen: "0.0.0.0"
+    port: 2006
+  filtergw:
+    enabled: true
+    allowList: "1"
+  jsoninfo:
+    enabled: true
+    accept: "0.0.0.0"
+    listen: "0.0.0.0"
+    port: 9090
+  nameservice:
+    enabled: true
+    name: "3"
+    service: "http://3.v.weimarnetz.de:80|tcp|VPN-hideandseek::5001"
+    hosts_file: "/var/etc/hosts"
+    add_hosts: "/etc/hosts.static"
+    suffix: ".olsr"
+    interval: "180"
+    timeout: "3600"
+  arprefresh:
+    enabled: true
+

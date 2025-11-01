@@ -1,0 +1,144 @@
+---
+# OLSR Installation und Konfiguration
+# OLSR wird aus dem Quellcode kompiliert und installiert
+
+- name: Build-Dependencies installieren (Debian/Ubuntu)
+  apt:
+    name:
+      - build-essential
+      - libnl-3-dev
+      - libnl-genl-3-dev
+      - git
+      - make
+      - gcc
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: Build-Dependencies installieren (RedHat/CentOS)
+  yum:
+    name:
+      - "@development-tools"
+      - libnl3-devel
+      - git
+      - make
+      - gcc
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: OLSR Build-Verzeichnis erstellen
+  file:
+    path: "/opt/olsr-build"
+    state: directory
+    mode: '0755'
+
+- name: OLSR-Quellcode herunterladen
+  git:
+    repo: "https://github.com/OLSR/olsrd.git"
+    dest: "/opt/olsr-build/olsrd"
+    version: "{{ olsr_branch | default('master') }}"
+    update: yes
+    force: no
+
+- name: Prüfen ob OLSR bereits installiert ist
+  stat:
+    path: "/usr/sbin/olsrd"
+  register: olsrd_binary
+
+- name: Git-Hash des heruntergeladenen OLSR-Quellcodes ermitteln
+  command: git rev-parse --short HEAD
+  args:
+    chdir: "/opt/olsr-build/olsrd"
+  register: olsr_source_hash
+  changed_when: false
+
+- name: Git-Hash des heruntergeladenen Quellcodes extrahieren
+  set_fact:
+    olsr_source_hash_short: "{{ olsr_source_hash.stdout }}"
+
+- name: Aktuelle OLSR-Version vom Server ermitteln
+  command: olsrd -f /tmp/olsr_version_check_nonexistent_{{ ansible_date_time.epoch }}.conf 2>&1 || true
+  register: olsr_current_version_output
+  changed_when: false
+  failed_when: false
+  when: olsrd_binary.stat.exists
+
+- name: Aktuelle OLSR-Version aus Output extrahieren
+  set_fact:
+    olsr_current_version_line: "{{ (olsr_current_version_output.stderr_lines + olsr_current_version_output.stdout_lines) | select('match', '.*olsr\\.org.*') | first | default('') }}"
+  when: olsrd_binary.stat.exists
+
+- name: Git-Hash aus aktueller OLSR-Version extrahieren (kurzer Hash)
+  set_fact:
+    olsr_installed_git_hash: "{{ olsr_current_version_line | regex_search('git_([a-f0-9]+)', '\\1') | default('') }}"
+  when: 
+    - olsrd_binary.stat.exists
+    - olsr_current_version_line | length > 0
+
+- name: Entscheidung ob Neuinstallation nötig ist
+  set_fact:
+    olsr_needs_install: "{{ not olsrd_binary.stat.exists or (olsr_installed_git_hash | default('') | length == 0) or (olsr_source_hash_short != olsr_installed_git_hash) }}"
+
+- name: OLSR kompilieren (make && make libs)
+  shell: |
+    make clean || true
+    make && make libs
+  args:
+    chdir: "/opt/olsr-build/olsrd"
+  when: olsr_needs_install | default(true)
+  # make libs kompiliert die Plugin-Libraries, keine spezifische Datei als Creates-Check
+
+- name: OLSR installieren (make install && make install_libs)
+  shell: |
+    make install && make install_libs
+  args:
+    chdir: "/opt/olsr-build/olsrd"
+  become: yes
+  when: olsr_needs_install | default(true)
+
+- name: OLSR WireGuard Broadcast IP berechnen (Partner-IP im /30-Subnetz)
+  set_fact:
+    olsr_wg_broadcast_ip: "{{ ((vpn_server_number | int) - 1) * 4 + 3 }}"
+    olsr_wg_ip4_broadcast: "{{ wireguard_ip_base | default('10.63.1') }}.{{ ((vpn_server_number | int) - 1) * 4 + 3 }}"
+
+- name: OLSR-Konfigurationsverzeichnis erstellen
+  file:
+    path: "/etc/olsrd"
+    state: directory
+    mode: '0755'
+
+- name: OLSR-Konfigurationsdatei erstellen
+  template:
+    src: "olsrd.conf.j2"
+    dest: "/etc/olsrd/olsrd.conf"
+    mode: '0644'
+    owner: root
+    group: root
+  notify: restart olsrd
+
+- name: Systemd-Service-Datei für OLSR erstellen
+  template:
+    src: "olsrd.service.j2"
+    dest: "/etc/systemd/system/olsrd.service"
+    mode: '0644'
+    owner: root
+    group: root
+  notify:
+    - reload systemd
+    - restart olsrd
+
+- name: neigh.sh Script installieren
+  copy:
+    src: "neigh.sh"
+    dest: "/usr/local/bin/neigh.sh"
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: OLSR Service aktivieren und starten
+  systemd:
+    name: olsrd
+    enabled: yes
+    state: started
+    daemon_reload: yes
+

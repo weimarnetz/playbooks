@@ -1,0 +1,16 @@
+[Interface]
+## This Server's private key ##
+PrivateKey = {{ wireguard_private_key }}
+Table = off
+## Client ip address ##
+Address = {{ wireguard_address }}
+
+[Peer]
+## Peer server public key ##
+PublicKey = {{ wireguard_peer_public_key | default('MISSING_PUBLIC_KEY') }}
+## set ACL ##
+AllowedIPs = {{ wireguard_allowed_ips | default([wireguard_address | default('10.63.1.1/30'), '10.63.0.0/16', '10.64.0.0/16']) | join(', ') }}
+## Peer server's public IPv4/IPv6 address and port ##
+Endpoint = {{ wireguard_peer_endpoint_host | default('MISSING_ENDPOINT') }}:{{ wireguard_port }}
+##  Key connection alive ##
+PersistentKeepalive = {{ wireguard_persistent_keepalive | default(20) }}

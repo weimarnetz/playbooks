@@ -1,0 +1,9 @@
+---
+# Handlers für WireGuard
+
+- name: restart wireguard
+  systemd:
+    name: "wg-quick@{{ wireguard_interface }}"
+    state: restarted
+    daemon_reload: yes
+

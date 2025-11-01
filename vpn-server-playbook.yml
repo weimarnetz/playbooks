@@ -1,0 +1,30 @@
+---
+- name: VPN-Server Setup für Weimarer Freifunk
+  hosts: vpn_servers
+  become: yes
+  vars:
+    # WireGuard Konfiguration
+    wireguard_interface: "wg0"
+    wireguard_base_port: 51190  # Basis-Port (Server-Nummer wird hinzugefügt: Server 2 → 51192)
+    wireguard_ip_base: "10.63.1"  # Basis-IP für /30-Netze
+    # vpn_server_number MUSS im Inventory pro Server gesetzt werden (2-9)
+    
+    # OLSR Konfiguration
+    olsr_branch: "master"  # Git-Branch für OLSR-Quellcode
+    olsr_main_ip: ""  # Wird automatisch aus WireGuard-Adresse gesetzt (kann überschrieben werden)
+    olsr_wireguard_interface: "wg0"  # WireGuard-Interface für OLSR (später kommt noch fastd hinzu)
+    olsr_hna4_networks: []  # Liste von HNA4-Netzwerken (z.B. ["10.61.0.0 255.255.0.0"])
+    
+  vars_prompt:
+    - name: wireguard_peer_public_key
+      prompt: "Öffentlicher Schlüssel des WireGuard-Peers (Debian 10 Server)"
+      private: yes
+    - name: wireguard_peer_endpoint_host
+      prompt: "Public IP-Adresse oder Hostname des Peers (Standard: 77.87.48.19)"
+      default: "77.87.48.19"
+      private: no
+    
+  roles:
+    - wireguard
+    - olsr
+

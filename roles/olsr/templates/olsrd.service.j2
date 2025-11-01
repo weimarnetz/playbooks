@@ -1,0 +1,18 @@
+[Unit]
+Description=OLSR (Optimized Link State Routing) Daemon
+After=network.target wg-quick@{{ olsr_wireguard_interface | default('wg0') }}.service
+Requires=wg-quick@{{ olsr_wireguard_interface | default('wg0') }}.service
+Wants=network.target
+
+[Service]
+Type=forking
+ExecStart=/usr/local/sbin/olsrd -f /etc/olsrd/olsrd.conf -pidfile /var/run/olsrd.pid
+ExecReload=/bin/kill -HUP $MAINPID
+PIDFile=/var/run/olsrd.pid
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=30
+
+[Install]
+WantedBy=multi-user.target
+

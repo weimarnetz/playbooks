@@ -1,0 +1,100 @@
+# Ansible
+*.retry
+.ansible/
+ansible.log
+ansible.log.*
+
+# Inventory-Dateien (nicht die Beispiele)
+inventory.ini
+inventory-vpn.ini
+inventory.yml
+inventory.yaml
+hosts.ini
+hosts.yml
+hosts.yaml
+
+# Vault-Passwörter und Secrets
+vault_pass.txt
+.secrets/
+*.vault
+vault-password-file
+
+# Private Keys und Zertifikate
+*.key
+*.pem
+*.p12
+*.pfx
+**/private.key
+**/*_private.key
+*.keychain
+
+# WireGuard Keys (private)
+**/wireguard*_private.key
+/etc/wireguard/*_private.key
+
+# SSH Keys (wenn versehentlich hinzugefügt)
+id_rsa
+id_ed25519
+id_ecdsa
+*.pub
+
+# Konfigurationsdateien mit lokalen Anpassungen
+ansible.cfg.local
+ansible_local.cfg
+
+# Temporäre Dateien
+*.tmp
+*.swp
+*.bak
+*~
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+.project
+.classpath
+.settings/
+
+# Logs
+*.log
+logs/
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# Environment-Variablen
+.env
+.env.local
+
+# OS-spezifisch
+Thumbs.db
+.DS_Store
+
+# Backup-Dateien
+*.orig
+*.save
+
+# Sensitive Ansible-Variablen (falls als Dateien gespeichert)
+group_vars/production/secrets.yml
+host_vars/*/secrets.yml
+**/secrets/
+
+# Lokale Test-Inventories
+test-inventory.*
+local-inventory.*
+

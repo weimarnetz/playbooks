@@ -1,0 +1,28 @@
+---
+# Standard-Variablen für WireGuard-Rolle
+
+# Name des WireGuard-Interfaces
+wireguard_interface: "wg0"
+
+# VPN-Server Nummer (2-9)
+# Server 2: 10.63.1.4/30 → Adresse 10.63.1.5/30
+# Server 3: 10.63.1.8/30 → Adresse 10.63.1.9/30
+# Server N: 10.63.1.(N*4)/30 → Adresse 10.63.1.(N*4+1)/30
+vpn_server_number: null
+
+# Basis-Port (Server-Nummer wird hinzugefügt)
+# Server 2 → Port endet auf 2 (z.B. 51192)
+wireguard_base_port: 51190
+
+# Basis-IP für /30-Netze
+wireguard_ip_base: "10.63.1"
+
+# Allowed IPs für den Peer (Standard: Server-Netz + 10.63.0.0/16 + 10.64.0.0/16)
+wireguard_peer_allowed_ips: []
+
+# Persistent Keepalive Intervall
+wireguard_persistent_keepalive: 20
+
+# Peer-Endpoint-Host (kann über vars_prompt oder inventory überschrieben werden)
+wireguard_peer_endpoint_host: "77.87.48.19"
+

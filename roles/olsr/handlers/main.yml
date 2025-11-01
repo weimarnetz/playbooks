@@ -1,0 +1,13 @@
+---
+# Handlers für OLSR
+
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: restart olsrd
+  systemd:
+    name: olsrd
+    state: restarted
+    daemon_reload: yes
+
