@@ -1,0 +1,24 @@
+# iptables Regeln für Weimarer Freifunk VPN-Server
+# Diese Datei wurde automatisch durch Ansible generiert
+# WICHTIG: Manuelle Änderungen werden beim nächsten Playbook-Lauf überschrieben
+
+*nat
+:PREROUTING ACCEPT [0:0]
+:INPUT ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+:POSTROUTING ACCEPT [0:0]
+{% for network in iptables_masquerade_networks %}
+# MASQUERADE für {{ network }} -> !{{ iptables_exclude_networks | join(', !') }}
+-A POSTROUTING -s {{ network }} ! -d {{ iptables_exclude_networks | join(' ! -d ') }} -j MASQUERADE
+{% endfor %}
+COMMIT
+
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+# Rate-Limiting für UDP Port 698
+-A OUTPUT -p udp --dport 698 -m limit --limit {{ iptables_udp698_rate_limit }} --limit-burst {{ iptables_udp698_burst }} -j ACCEPT
+-A OUTPUT -p udp --dport 698 -j DROP
+COMMIT
+

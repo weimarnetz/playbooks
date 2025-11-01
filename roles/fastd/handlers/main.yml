@@ -1,0 +1,8 @@
+---
+# Handlers für fastd
+
+- name: restart fastd
+  systemd:
+    name: "fastd@vpn"
+    state: restarted
+

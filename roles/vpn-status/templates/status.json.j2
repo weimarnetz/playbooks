@@ -1,0 +1,8 @@
+{
+  "server": "{{ inventory_hostname | default('unknown') }}",
+  "country": "{{ vpn_status_country | default('DE') }}",
+  "maxmtu": "{{ vpn_status_maxmtu | default('1280') }}",
+  "clients": "{{ vpn_status_clients | default('0') }}",
+  "gateway_ip": "{{ vpn_status_gateway_ip }}"
+}
+

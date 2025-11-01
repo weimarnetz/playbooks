@@ -34,8 +34,6 @@ olsr_plugins:
     port: 9090
   nameservice:
     enabled: true
-    name: "3"
-    service: "http://3.v.weimarnetz.de:80|tcp|VPN-hideandseek::5001"
     hosts_file: "/var/etc/hosts"
     add_hosts: "/etc/hosts.static"
     suffix: ".olsr"

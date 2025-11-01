@@ -1,0 +1,85 @@
+---
+# fastd Installation und Konfiguration für Router-Verbindungen
+
+- name: fastd installieren (Debian/Ubuntu)
+  apt:
+    name:
+      - fastd
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: fastd installieren (RedHat/CentOS)
+  yum:
+    name:
+      - fastd
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Gateway-IP für fastd berechnen
+  set_fact:
+    fastd_gateway_ip: "{{ fastd_gateway_ip_base }}.{{ vpn_server_number }}"
+
+- name: Verzeichnis für fastd-Konfiguration erstellen
+  file:
+    path: "/etc/fastd/vpn"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Verzeichnis für fastd-Peers erstellen
+  file:
+    path: "/etc/fastd/vpn/peers"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Prüfen ob fastd_secret gesetzt ist
+  assert:
+    that:
+      - fastd_secret is defined
+      - fastd_secret | length > 0
+    fail_msg: |
+      Fehler: fastd_secret muss gesetzt sein.
+      
+      Diese Variable muss gesetzt werden:
+      - Im Inventory (z.B. inventory-vpn.yml) oder
+      - Per Command-Line: ansible-playbook ... -e "fastd_secret=..."
+      
+      Siehe README-vpn.md für Details zur Konfiguration.
+    success_msg: "fastd_secret ist gesetzt."
+
+- name: fastd-Konfigurationsdatei erstellen
+  template:
+    src: "fastd.conf.j2"
+    dest: "/etc/fastd/vpn/fastd.conf"
+    mode: '0644'
+    owner: root
+    group: root
+  notify: restart fastd
+
+- name: fastd Service aktivieren und starten
+  systemd:
+    name: "fastd@vpn"
+    enabled: yes
+    state: started
+    daemon_reload: yes
+
+- name: fastd Outputs anzeigen
+  debug:
+    msg:
+      - "=========================================="
+      - "fastd Setup abgeschlossen"
+      - "=========================================="
+      - "Server: {{ inventory_hostname }} (vpn_server_number: {{ vpn_server_number }})"
+      - ""
+      - "fastd Konfiguration:"
+      - "  Interface: {{ fastd_interface }}"
+      - "  Port: {{ fastd_port }}"
+      - "  Gateway-IP: {{ fastd_gateway_ip }}"
+      - ""
+      - "=========================================="
+  tags: always
+

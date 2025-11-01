@@ -1,0 +1,61 @@
+---
+# VPN-Status Webserver (Nginx) für JSON-Endpoint
+
+- name: nginx installieren
+  apt:
+    name:
+      - nginx
+    state: present
+    update_cache: yes
+
+- name: Gateway-IP für VPN-Status berechnen
+  set_fact:
+    vpn_status_gateway_ip: "{{ vpn_status_gateway_ip_base }}.{{ vpn_server_number }}"
+
+- name: Verzeichnis für VPN-Status JSON erstellen
+  file:
+    path: "/var/www/html/freifunk/vpn"
+    state: directory
+    mode: '0755'
+    owner: www-data
+    group: www-data
+
+- name: VPN-Status JSON-Datei erstellen
+  template:
+    src: "status.json.j2"
+    dest: "/var/www/html/freifunk/vpn/index.json"
+    mode: '0644'
+    owner: www-data
+    group: www-data
+
+- name: Nginx-Konfiguration für VPN-Status erstellen
+  template:
+    src: "nginx-vpn-status.conf.j2"
+    dest: "/etc/nginx/sites-available/vpn-status"
+    mode: '0644'
+    owner: root
+    group: root
+  notify: restart nginx
+
+- name: Default-Site deaktivieren
+  file:
+    path: "/etc/nginx/sites-enabled/default"
+    state: absent
+
+- name: Nginx-Konfiguration für VPN-Status aktivieren
+  file:
+    src: "/etc/nginx/sites-available/vpn-status"
+    dest: "/etc/nginx/sites-enabled/vpn-status"
+    state: link
+  notify: restart nginx
+
+- name: Nginx-Konfiguration testen
+  command: nginx -t
+  changed_when: false
+
+- name: Nginx Service aktivieren und starten
+  systemd:
+    name: nginx
+    enabled: yes
+    state: restarted
+

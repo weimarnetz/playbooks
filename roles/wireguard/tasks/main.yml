@@ -90,14 +90,21 @@
   set_fact:
     wireguard_public_key: "{{ public_key_gen.stdout if (public_key_gen.stdout is defined and public_key_gen.stdout | length > 0) else (public_key_file_content.content | b64decode | trim) }}"
 
-- name: Prüfen ob vars_prompt Variablen vorhanden sind
+- name: Prüfen ob erforderliche WireGuard-Variablen vorhanden sind
   assert:
     that:
       - wireguard_peer_public_key is defined
       - wireguard_peer_public_key | length > 0
       - wireguard_peer_endpoint_host is defined
       - wireguard_peer_endpoint_host | length > 0
-    fail_msg: "Fehler: wireguard_peer_public_key oder wireguard_peer_endpoint_host fehlt. Diese sollten über vars_prompt abgefragt werden."
+    fail_msg: |
+      Fehler: wireguard_peer_public_key oder wireguard_peer_endpoint_host fehlt.
+      
+      Diese Variablen müssen gesetzt werden:
+      - Im Inventory (z.B. inventory-vpn.yml) oder
+      - Per Command-Line: ansible-playbook ... -e "wireguard_peer_public_key=..." -e "wireguard_peer_endpoint_host=..."
+      
+      Siehe README-vpn.md für Details zur Konfiguration.
     success_msg: "Alle erforderlichen WireGuard-Peer-Variablen sind vorhanden."
 
 - name: Prüfen ob vpn_server_number gesetzt ist

@@ -1,0 +1,11 @@
+---
+# Standard-Variablen für vpn-status-Rolle
+
+# Gateway-IP Basis (wird als {{ vpn_status_gateway_ip_base }}.{{ vpn_server_number }} berechnet)
+vpn_status_gateway_ip_base: "10.63.0"
+
+# JSON-Status Felder
+vpn_status_country: "DE"
+vpn_status_maxmtu: "1280"
+vpn_status_clients: "0"
+

@@ -1,0 +1,21 @@
+---
+# Standard-Variablen für fastd-Rolle
+
+# fastd-Port
+fastd_port: 10000
+
+# fastd-Interface Name
+fastd_interface: "fastd_mesh"
+
+# fastd User
+fastd_user: "nobody"
+
+# MTU
+fastd_mtu: 1280
+
+# Log-Level
+fastd_log_level: "debug"
+
+# Gateway-IP Basis (wird als {{ fastd_gateway_ip_base }}.{{ vpn_server_number }} berechnet)
+fastd_gateway_ip_base: "10.63.0"
+

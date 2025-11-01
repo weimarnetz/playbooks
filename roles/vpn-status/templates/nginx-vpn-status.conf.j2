@@ -1,0 +1,18 @@
+# VPN-Status Nginx-Konfiguration
+# Diese Datei wurde automatisch durch Ansible generiert
+
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    
+    server_name {{ inventory_hostname }};
+
+    root /var/www/html;
+    index index.json;
+
+    location /freifunk/vpn/ {
+        default_type application/json;
+        add_header Access-Control-Allow-Origin *;
+    }
+}
+

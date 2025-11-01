@@ -1,0 +1,31 @@
+# fastd Konfiguration für Weimarer Freifunk VPN-Server
+# Diese Datei wurde automatisch durch Ansible generiert
+
+bind 0.0.0.0:{{ fastd_port }};
+interface "{{ fastd_interface }}";
+user "{{ fastd_user }}";
+mode tap;
+method "null";
+method "null@l2tp";
+#offload l2tp yes;
+mtu {{ fastd_mtu }};
+secret "{{ fastd_secret }}";
+log level {{ fastd_log_level }};
+
+#folgende Zeile sorgt dafuer das jeder Peer akzeptiert wird
+on verify "logger $PEER_NAME && true";
+persist interface no;
+include peers from "peers";
+
+on up "
+  logger \"$LOCAL_ADDRESS peer: $PEER_NAME $PEER_KEY\"
+  ip a a {{ fastd_gateway_ip }}/16 dev $INTERFACE
+  ip link set up {{ fastd_interface }}
+";
+
+on down "
+  logger \"$LOCAL_ADDRESS peer: $PEER_NAME $PEER_KEY\"
+  ip a d {{ fastd_gateway_ip }}/16 dev $INTERFACE
+  ip link set down {{ fastd_interface }}
+";
+

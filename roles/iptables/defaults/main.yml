@@ -1,0 +1,16 @@
+---
+# Standard-Variablen für iptables-Rolle
+
+# Rate-Limiting für UDP Port 698
+iptables_udp698_rate_limit: "200/sec"
+iptables_udp698_burst: 200
+
+# Netzwerke für NAT-Masquerading
+iptables_masquerade_networks:
+  - "10.63.0.0/16"
+  - "10.64.0.0/16"
+
+# Ausgeschlossene Netzwerke (Pakete zu diesen werden nicht maskiert)
+iptables_exclude_networks:
+  - "10.0.0.0/8"
+

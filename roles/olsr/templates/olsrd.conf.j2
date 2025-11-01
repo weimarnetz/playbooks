@@ -67,8 +67,8 @@ LoadPlugin "olsrd_jsoninfo.so.1.1"
 {% if olsr_plugins.nameservice.enabled | default(false) %}
 LoadPlugin "olsrd_nameservice.so.0.4"
 {
-	PlParam "name" "{{ olsr_plugins.nameservice.name }}"
-	PlParam "service" "{{ olsr_plugins.nameservice.service }}"
+	PlParam "name" "{{ vpn_server_number | string }}"
+	PlParam "service" "{{ 'http://' + (vpn_server_number | string) + '.v.weimarnetz.de:80|tcp|VPN-hideandseek::10000' }}"
 	PlParam "hosts-file" "{{ olsr_plugins.nameservice.hosts_file }}"
 	PlParam "add-hosts" "{{ olsr_plugins.nameservice.add_hosts }}"
 	PlParam "suffix" "{{ olsr_plugins.nameservice.suffix }}"
