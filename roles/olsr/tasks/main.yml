@@ -11,6 +11,10 @@
       - git
       - make
       - gcc
+      - bison
+      - flex
+      - pkg-config
+      - libgps-dev
     state: present
     update_cache: yes
 
