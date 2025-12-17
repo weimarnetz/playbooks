@@ -24,7 +24,7 @@ Die VPN-Server-Architektur besteht aus:
 
 ### 1. Inventory-Datei erstellen
 
-Erstellen Sie eine Inventory-Datei (`inventory-vpn.yml`):
+Erstelle eine Inventory-Datei (`inventory-vpn.yml`):
 
 **Wichtige Ansible-Variablen:**
 - `ansible_host`: IP-Adresse oder Hostname (nur wenn Inventory-Name != Verbindungsadresse)
@@ -40,8 +40,8 @@ vpn_servers:
   hosts:
     5.v.weimarnetz.de:
       vpn_server_number: 5
-      ansible_port: 2323
-      ansible_user: andibraeu
+      ansible_port: <port>
+      ansible_user: <username>
       # Weitere Variablen siehe Abschnitt "Variablen"
 ```
 
@@ -126,6 +126,9 @@ ansible-playbook -i inventory-vpn.yml vpn-server-playbook.yml \
 # Mit verschlüsselten Variablen
 ansible-playbook -i inventory-vpn.yml vpn-server-playbook.yml --ask-vault-pass
 
+# Mit verschlüsselten Variablen und sudo-Passwort-Abfrage (falls auf dem Zielsystem für sudo ein Passwort benötigt wird)
+ansible-playbook -i inventory-vpn.yml vpn-server-playbook.yml --ask-vault-pass --ask-become-pass
+
 # Ohne verschlüsselte Variablen
 ansible-playbook -i inventory-vpn.yml vpn-server-playbook.yml
 ```
@@ -155,7 +158,7 @@ WireGuard Konfiguration:
   Port: 51195
   Endpoint: 77.87.48.19:51195
 
-Bitte übermitteln Sie den öffentlichen Schlüssel an die
+Bitte übermittle den öffentlichen Schlüssel an die
 Admins des zentralen Servers, damit dieser konfiguriert werden kann.
 ==========================================
 ```
@@ -251,70 +254,70 @@ Nach dem Ausführen des Playbooks werden folgende Dateien erstellt:
 
 ### WireGuard-Verbindung funktioniert nicht
 
-1. Prüfen Sie, ob der Service läuft:
+1. Prüfe, ob der Service läuft:
    ```bash
    systemctl status wg-quick@wg0
    ```
 
-2. Prüfen Sie die WireGuard-Konfiguration:
+2. Prüfe die WireGuard-Konfiguration:
    ```bash
    wg show
    ```
 
-3. Prüfen Sie die Logs:
+3. Prüfe die Logs:
    ```bash
    journalctl -u wg-quick@wg0 -f
    ```
 
-4. Stellen Sie sicher, dass die öffentlichen Schlüssel auf beiden Seiten korrekt sind
+4. Stelle sicher, dass die öffentlichen Schlüssel auf beiden Seiten korrekt sind
 
 ### OLSR findet keine Peers
 
-1. Prüfen Sie, ob der Service läuft:
+1. Prüfe, ob der Service läuft:
    ```bash
    systemctl status olsrd
    ```
 
-2. Prüfen Sie die OLSR-Konfiguration:
+2. Prüfe die OLSR-Konfiguration:
    ```bash
    cat /etc/olsrd/olsrd.conf
    ```
 
-3. Prüfen Sie, ob WireGuard läuft (OLSR benötigt das WireGuard-Interface):
+3. Prüfe, ob WireGuard läuft (OLSR benötigt das WireGuard-Interface):
    ```bash
    ip addr show wg0
    ```
 
-4. Prüfen Sie OLSR-Nachbarn:
+4. Prüfe OLSR-Nachbarn:
    ```bash
    /usr/local/bin/neigh.sh
    ```
 
-5. Erhöhen Sie den Debug-Level in `/etc/olsrd/olsrd.conf`:
+5. Erhöhe den Debug-Level in `/etc/olsrd/olsrd.conf`:
    ```
    DebugLevel 2
    ```
 
 ### fastd-Verbindungen funktionieren nicht
 
-1. Prüfen Sie, ob der Service läuft:
+1. Prüfe, ob der Service läuft:
    ```bash
    systemctl status fastd@vpn
    ```
 
-2. Prüfen Sie die fastd-Konfiguration:
+2. Prüfe die fastd-Konfiguration:
    ```bash
    cat /etc/fastd/vpn/fastd.conf
    ```
 
-3. Prüfen Sie die Logs:
+3. Prüfe die Logs:
    ```bash
    journalctl -u fastd@vpn -f
    ```
 
 ### Öffentliche Schlüssel abrufen
 
-Nach dem Ausführen des Playbooks finden Sie den öffentlichen WireGuard-Schlüssel in:
+Nach dem Ausführen des Playbooks findest du den öffentlichen WireGuard-Schlüssel in:
 ```bash
 cat /etc/wireguard/wg0_public.key
 ```
