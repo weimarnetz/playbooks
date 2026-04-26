@@ -165,8 +165,8 @@ def process_node_json(comment, body, ignore_if_offline=True):
         isuplink = False
         try:
             if (
-                owmnode["olsr"].get("ipv4Config").get("hasIpv4Gateway") is True
-                or owmnode["olsr"].get("ipv4Config").get("hasIpv6Gateway") is True
+                owmnode["olsr"].get("ipv4Config").get(""config").get("hasIpv4Gateway") is True
+                or owmnode["olsr"].get("config").get("ipv4Config").get("hasIpv6Gateway") is True
             ):
                 isuplink = True
             # Dirty fix: just assume that any router which has WAN also shares wifi.
