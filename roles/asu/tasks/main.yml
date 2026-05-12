@@ -1,0 +1,219 @@
+---
+# OpenWrt ASU — Podman (rootless), podman-compose, systemd --user
+
+- name: Compose-CLI-Argumente ermitteln
+  ansible.builtin.set_fact:
+    asu_compose_file_args: >-
+      {{ '-f podman-compose.yml -f podman-compose.cache.yml'
+         if asu_enable_cache_compose | bool
+         else '-f podman-compose.yml' }}
+    asu_idmap_package: >-
+      {{ asu_idmap_packages_by_os.get(ansible_os_family, asu_idmap_package_default) }}
+
+- name: Basispakete installieren
+  ansible.builtin.package:
+    name: "{{ asu_packages }}"
+    state: present
+  become: true
+
+- name: newuidmap/newgidmap für rootless Podman installieren
+  ansible.builtin.package:
+    name: "{{ asu_idmap_package }}"
+    state: present
+  become: true
+
+- name: Deploy-Nutzer für rootless Podman anlegen
+  ansible.builtin.user:
+    name: "{{ asu_user }}"
+    home: "{{ asu_home }}"
+    create_home: true
+    state: present
+  become: true
+
+- name: Prüfen ob SubUID für Deploy-Nutzer in /etc/subuid eingetragen ist
+  ansible.builtin.command:
+    argv:
+      - grep
+      - -q
+      - "{{ '^' ~ asu_user ~ ':' }}"
+      - /etc/subuid
+  register: asu_subuid_check
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: Sub-UID und Sub-GID für rootless Podman zuweisen
+  ansible.builtin.command: >-
+    usermod --add-subuids {{ asu_subuid_range }} --add-subgids {{ asu_subgid_range }}
+    {{ asu_user | quote }}
+  become: true
+  when: asu_subuid_check.rc != 0
+
+- name: Linger für rootless-Podman nach Logout aktivieren
+  ansible.builtin.command: loginctl enable-linger {{ asu_user | quote }}
+  args:
+    creates: "/var/lib/systemd/linger/{{ asu_user }}"
+  become: true
+
+- name: Home-Verzeichnis des Deploy-Nutzers sicherstellen
+  ansible.builtin.file:
+    path: "{{ asu_home }}"
+    state: directory
+    owner: "{{ asu_user }}"
+    group: "{{ asu_user }}"
+    mode: "0755"
+  become: true
+
+- name: ASU-Quellcode aus Git
+  ansible.builtin.git:
+    repo: "{{ asu_repo_url }}"
+    dest: "{{ asu_install_dir }}"
+    version: "{{ asu_repo_version }}"
+    update: true
+  become: true
+  become_user: "{{ asu_user }}"
+
+- name: Volume-Verzeichnisse unter Repo anlegen
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ asu_user }}"
+    group: "{{ asu_user }}"
+    mode: "0755"
+  loop:
+    - "{{ asu_install_dir }}/redis-data"
+    - "{{ asu_install_dir }}/public/store"
+    - "{{ asu_install_dir }}/public"
+    - "{{ asu_install_dir }}/cache-data"
+  become: true
+
+- name: asu.toml aus Rolle (template)
+  ansible.builtin.template:
+    src: asu.toml.j2
+    dest: "{{ asu_install_dir }}/asu.toml"
+    owner: "{{ asu_user }}"
+    group: "{{ asu_user }}"
+    mode: "0600"
+  become: true
+  when: asu_config_mode == "template"
+  notify: Restart ASU compose stack
+
+- name: asu.toml aus files/asu.toml kopieren
+  ansible.builtin.copy:
+    src: asu.toml
+    dest: "{{ asu_install_dir }}/asu.toml"
+    owner: "{{ asu_user }}"
+    group: "{{ asu_user }}"
+    mode: "0600"
+  become: true
+  when: asu_config_mode == "copy"
+  notify: Restart ASU compose stack
+
+- name: Podman-Socket (Benutzer) aktivieren
+  ansible.builtin.systemd:
+    name: podman.socket
+    scope: user
+    enabled: true
+    state: started
+  become: true
+  become_user: "{{ asu_user }}"
+
+- name: UID für Podman-Socket-Symlink ermitteln
+  ansible.builtin.command: id -u {{ asu_user | quote }}
+  register: asu_uid_lookup
+  changed_when: false
+  become: true
+
+- name: Symlink podman.sock ins Repo (wie upstream README)
+  ansible.builtin.file:
+    src: "/run/user/{{ asu_uid_lookup.stdout }}/podman/podman.sock"
+    dest: "{{ asu_install_dir }}/podman.sock"
+    owner: "{{ asu_user }}"
+    group: "{{ asu_user }}"
+    state: link
+    force: true
+  become: true
+
+- name: Isoliertes Build-Netz asu-build prüfen
+  ansible.builtin.command: podman network inspect asu-build
+  args:
+    chdir: "{{ asu_install_dir }}"
+  register: asu_net_inspect
+  failed_when: false
+  changed_when: false
+  become: true
+  become_user: "{{ asu_user }}"
+
+- name: Isoliertes Build-Netz asu-build anlegen
+  ansible.builtin.command: podman network create asu-build
+  args:
+    chdir: "{{ asu_install_dir }}"
+  when: asu_net_inspect.rc != 0
+  become: true
+  become_user: "{{ asu_user }}"
+
+- name: systemd-Benutzerkonfiguration Verzeichnis
+  ansible.builtin.file:
+    path: "{{ asu_home }}/.config/systemd/user"
+    state: directory
+    owner: "{{ asu_user }}"
+    group: "{{ asu_user }}"
+    mode: "0755"
+  become: true
+
+- name: systemd-Benutzerunit für podman-compose
+  ansible.builtin.template:
+    src: asu-compose.service.j2
+    dest: "{{ asu_home }}/.config/systemd/user/asu-compose.service"
+    owner: "{{ asu_user }}"
+    group: "{{ asu_user }}"
+    mode: "0644"
+  register: asu_compose_unit
+  become: true
+
+- name: systemd-Benutzerdaemon neu laden
+  ansible.builtin.systemd:
+    daemon_reload: true
+    scope: user
+  become: true
+  become_user: "{{ asu_user }}"
+  when: asu_compose_unit.changed | bool
+
+- name: ASU-Compose nach Unit-Änderung neu starten
+  ansible.builtin.systemd:
+    name: asu-compose
+    scope: user
+    state: restarted
+  become: true
+  become_user: "{{ asu_user }}"
+  when: asu_compose_unit.changed | bool
+
+- name: ASU-Compose-Dienst aktivieren und starten
+  ansible.builtin.systemd:
+    name: asu-compose
+    scope: user
+    enabled: true
+    state: started
+  become: true
+  become_user: "{{ asu_user }}"
+
+- name: Container-Images aktualisieren
+  ansible.builtin.command: "{{ asu_podman_compose_bin }} {{ asu_compose_file_args }} pull"
+  args:
+    chdir: "{{ asu_install_dir }}"
+  when: asu_pull_images | bool
+  register: asu_pull
+  changed_when: false
+  become: true
+  become_user: "{{ asu_user }}"
+
+- name: Stack nach Image-Update neu starten
+  ansible.builtin.systemd:
+    name: asu-compose
+    scope: user
+    state: restarted
+  become: true
+  become_user: "{{ asu_user }}"
+  when:
+    - asu_pull_images | bool
+    - asu_restart_after_pull | bool

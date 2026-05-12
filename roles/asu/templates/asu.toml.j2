@@ -1,0 +1,27 @@
+# Von Ansible verwaltet — Overrides in group_vars / host_vars
+
+upstream_url = "{{ asu_upstream_url | default('https://downloads.openwrt.org') }}"
+allow_defaults = {{ asu_allow_defaults | default(false) | bool | lower }}
+log_level = "{{ asu_log_level | default('INFO') }}"
+
+base_container = "{{ asu_base_container | default('ghcr.io/openwrt/imagebuilder') }}"
+
+{% if asu_cache_url is defined and asu_cache_url | length > 0 %}
+cache_url = "{{ asu_cache_url }}"
+{% endif %}
+
+build_ttl = "{{ asu_build_ttl | default('7d') }}"
+build_ttl_unversioned = "{{ asu_build_ttl_unversioned | default('24h') }}"
+build_defaults_ttl = "{{ asu_build_defaults_ttl | default('30m') }}"
+build_failure_ttl = "{{ asu_build_failure_ttl | default('1h') }}"
+max_pending_jobs = {{ asu_max_pending_jobs | default(200) }}
+job_timeout = "{{ asu_job_timeout | default('10m') }}"
+
+{% if asu_repository_allow_list is defined and asu_repository_allow_list | length > 0 %}
+repository_allow_list = [
+{% for url in asu_repository_allow_list %}
+    "{{ url }}"{% if not loop.last %},{% endif %}
+
+{% endfor %}
+]
+{% endif %}

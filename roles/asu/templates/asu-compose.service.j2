@@ -1,0 +1,21 @@
+[Unit]
+Description=OpenWrt ASU (podman-compose)
+After=podman.socket network-online.target
+Wants=network-online.target
+Requires=podman.socket
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory={{ asu_install_dir }}
+# Rootless Podman braucht Session-Runtime + D-Bus; unter systemd --user fehlen die oft in Subprozessen von podman-compose.
+Environment=XDG_RUNTIME_DIR=/run/user/%U
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%U/bus
+Environment=HOME={{ asu_home }}
+Environment=COMPOSE_PARALLEL_LIMIT={{ asu_compose_parallel_limit }}
+ExecStart={{ asu_podman_compose_bin }} {{ asu_compose_file_args }} up -d --remove-orphans {{ asu_podman_compose_up_extra_args }}
+ExecStop={{ asu_podman_compose_bin }} {{ asu_compose_file_args }} stop
+TimeoutStartSec=0
+
+[Install]
+WantedBy=default.target

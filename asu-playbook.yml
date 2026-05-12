@@ -1,0 +1,18 @@
+---
+# OpenWrt ASU (podman-compose, rootless). Siehe roles/asu/defaults/main.yml
+#
+# Voraussetzungen auf dem Zielhost:
+# - Deploy-Nutzer (vars: asu_user) existiert, SSH-Login für Ansible
+# - Rootless-Podman: subuid/subgid für den Nutzer gesetzt (siehe podman.io Rootless-Tutorial)
+#
+# Ausführung:
+#   ansible-playbook -i inventory-asu.yml asu-playbook.yml
+#
+# Archlinux: evtl. asu_packages ohne podman-compose und Binary via pip/AUR — dann
+#   asu_podman_compose_bin anpassen (z. B. ~/.local/bin/podman-compose).
+
+- name: ASU-Server (Podman Compose)
+  hosts: asu_servers
+  become: true
+  roles:
+    - asu

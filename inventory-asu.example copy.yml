@@ -1,0 +1,26 @@
+---
+# Kopieren nach inventory-asu.yml und anpassen
+
+all:
+  children:
+    asu_servers:
+      hosts:
+        vpn5.weimarnetz.de:
+          # Ansible-Login (mit passwordlosem sudo für Pakete/Linger)
+          ansible_user: deploy
+          # Lokaler Nutzer für rootless Podman + Git-Checkout
+          asu_user: asu
+
+      vars:
+        # Beispiel: Fork oder Pin
+        asu_repo_url: "https://github.com/openwrt/asu.git"
+        asu_repo_version: "main"
+
+        asu_enable_cache_compose: true
+        asu_cache_url: "http://cache"
+
+        asu_repository_allow_list:
+          - "https://buildbot.weimarnetz.de/"
+
+        # Nach Updates Images neu ziehen und Dienst neu starten:
+        asu_restart_after_pull: true

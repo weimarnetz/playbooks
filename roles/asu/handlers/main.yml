@@ -1,0 +1,8 @@
+---
+- name: Restart ASU compose stack
+  ansible.builtin.systemd:
+    name: asu-compose
+    scope: user
+    state: restarted
+  become_user: "{{ asu_user }}"
+  become: true

@@ -1,0 +1,44 @@
+---
+# Deploy-Nutzer (rootless Podman). Rolle legt Nutzer an und weist Sub-UID/GID zu (siehe asu_subuid_range).
+asu_user: "asu"
+# Bei mehreren rootless-Nutzern auf dem Host Ranges in host_vars anpassen (Überlappung vermeiden).
+asu_subuid_range: "100000-165535"
+asu_subgid_range: "100000-165535"
+# Paket mit newuidmap/newgidmap (ansible_os_family → Schlüssel; sonst Fallback)
+asu_idmap_package_default: uidmap
+asu_idmap_packages_by_os:
+  Debian: uidmap
+  RedHat: shadow-utils
+  Archlinux: shadow
+  Alpine: shadow
+  Suse: shadow
+asu_home: "/home/{{ asu_user }}"
+asu_install_dir: "{{ asu_home }}/asu"
+
+asu_repo_url: "https://github.com/openwrt/asu.git"
+asu_repo_version: "main"
+
+# nginx-Cache-Compose mit ausliefern (wie upstream README)
+asu_enable_cache_compose: false
+
+# Bei jedem Playbook-Lauf Images pullen
+asu_pull_images: true
+
+# Nach pull systemd-Dienst neu starten (kurzer API-Worker-Ausfall)
+asu_restart_after_pull: false
+
+# asu.toml: "template" (asu.toml.j2), "copy" (roles/asu/files/asu.toml), "skip"
+asu_config_mode: "template"
+
+# Podman-Compose-Binary (Debian: /usr/bin/podman-compose); bei pip --user anpassen
+asu_podman_compose_bin: "/usr/bin/podman-compose"
+# „podman-compose up“: Podmans --replace kennt compose nicht; --force-recreate entfernt bestehende Container vor dem Neu-Anlegen (bei jedem Dienststart).
+asu_podman_compose_up_extra_args: "--force-recreate"
+# Weniger Parallelität → weniger Races beim rootless-Netzwerk (podman-compose liest COMPOSE_PARALLEL_LIMIT)
+asu_compose_parallel_limit: 1
+
+# Paketliste — unter Arch ggf. host_vars: ohne podman-compose und separat installieren
+asu_packages:
+  - podman
+  - podman-compose
+  - git
